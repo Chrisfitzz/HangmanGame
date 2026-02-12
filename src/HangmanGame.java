@@ -126,5 +126,44 @@ public class HangmanGame {
         return scores; // Returns the list of HighScore objects loaded from the file
     }
 
+
+    // Saves the current list of HighScore objects to highscores.txt (overwrites file)
+    private static void saveHighScores(String fileName, ArrayList<HighScore> scores) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(fileName))) {
+            for (HighScore hs : scores) {
+                writer.write(hs.getName() + "," + hs.getScore());
+                writer.newLine();
+            }
+        } catch (IOException e) {
+            System.out.println("Error saving highscores: " + e.getMessage());
+        }
+    }
+    // loadHighScores() = disk → memory
+    // saveHighScores() = memory → disk
+    // * This is the data flow
+
+
+    private static void addScoreAndKeepTop5(ArrayList<HighScore> scores,
+                                            String playerName,
+                                            int score) {
+
+        // Add the new score
+        scores.add(new HighScore(playerName, score));
+
+        // Sort descending (highest score first)
+        scores.sort((a, b) -> Integer.compare(b.getScore(), a.getScore()));
+        // (a, b) -> Integer - lambda expression (setting up comparison)
+        // Integer.compare.. - compares two integers and returns a value indicating their order
+        // b then a = descending | a then b = ascending
+
+        while (scores.size() > 5) {
+        // while loop because sometimes 6 entries → remove 1 | 7 entries → remove 2
+
+            scores.remove(scores.size() - 1);
+            // Removes the last element in the list (lowest score)
+        }
+    }
+
+
 }
 
