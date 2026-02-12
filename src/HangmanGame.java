@@ -1,0 +1,102 @@
+import java.io.*;
+import java.util.Scanner;
+
+public class HangmanGame {
+    public static void main(String[] args) {
+        int counter = 0;
+        //Would be better to use an Arraylist, but using an array to learn
+        // 1. -- First pass to count the number of lines (words) to determine array size
+        try (BufferedReader reader = new BufferedReader(new FileReader("words.txt"))) { // Opens the file
+            // New FileReader("/Users/chrisfitzgerald/IdeaProjectso/HangmanGame/words.txt");
+            // -- Absolute path, but not portable. Using relative path instead.
+
+            String line;
+            while ((line = reader.readLine()) != null) { //Read line by line until end of file
+                counter++;
+            }
+        } catch (IOException e) {
+            System.out.println("Error reading the file: " + e.getMessage());
+        }
+        String [] wordList = new String[counter]; // Array to hold filewords -- size is number of lines in file
+        // Check if list is empty before proceeding to fill the array
+        if (counter == 0) {
+            System.out.println("No words found in words.txt. Exiting game.");
+            return;
+        }
+
+
+        // 2. -- Second pass to fill the array with words
+        try (BufferedReader reader = new BufferedReader(new FileReader("words.txt"))) {
+            int index = 0;
+            String line;
+            while ((line = reader.readLine()) != null) { // Read line by line until end of file
+                wordList[index] = line; // Fill the array with words from the file
+                index++;
+            }
+        } catch (IOException e) {
+            System.out.println("Error reading the file: " + e.getMessage());
+        }
+        int randomIndex = (int)(Math.random() * counter); // Random * array length to get random index
+        String secretWord = wordList[randomIndex].toLowerCase(); // Select a random word from the array
+
+        Scanner scan = new Scanner(System.in);
+        System.out.println("Welcome to Hangman!");
+        System.out.println("Enter your name:");
+        String playerName = scan.nextLine();
+        int score = 0; // Initialize score variable
+
+        char[] currentProgress = new char[secretWord.length()];
+        for (int i = 0; i < currentProgress.length; i++) {
+            currentProgress[i] = '_';
+        }
+
+
+        int lives = 6;//Track lives
+        while (lives > 0) {
+            // Print the progress
+            for (char c : currentProgress) { // Print each character in current progress
+                System.out.print(c + " ");
+            }
+            System.out.println();
+            System.out.println("Lives remaining: " + lives);
+
+            // Ask for a guess
+            System.out.println("\nEnter your guess:");
+            String guess = scan.nextLine();
+            if (guess.isEmpty()) {
+                System.out.println("Please enter at least one character.");
+                continue; // skip to next loop iteration
+            }
+            char guessedLetter = guess.toLowerCase().charAt(0);
+            // not case sensitive, take first character
+
+
+            // Check if the letter is in the secret word
+            if (secretWord.indexOf(guessedLetter) >= 0) { // Letter is in the word
+                System.out.println("Correct guess!");
+                for (int i = 0; i < secretWord.length(); i++) {
+                    if (secretWord.charAt(i) == guessedLetter) {
+                        currentProgress[i] = guessedLetter; // Update current progress
+                    }
+                }
+            } else {
+                System.out.println("Wrong guess!");
+                lives--;
+            }
+
+            // Check if the user has guessed the full word
+            if (new String(currentProgress).equals(secretWord)) {
+                System.out.println("Congratulations! You've guessed the word!");
+                System.out.println(("Your score: " + score + "has been added to the leaderboard!"));
+                break;  // Exit the while loop
+            }
+        }
+
+        // After loop finishes
+        if (lives == 0) {
+            System.out.println("Game Over! The secret word was: " + secretWord);
+        }
+        scan.close();
+    }
+}
+
