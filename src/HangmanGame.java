@@ -4,6 +4,7 @@ import java.util.ArrayList;
 
 public class HangmanGame {
     public static void main(String[] args) {
+
         int counter = 0;
         //Would be better to use an Arraylist, but using an array to learn
         // 1. -- First pass to count the number of lines (words) to determine array size
@@ -39,6 +40,7 @@ public class HangmanGame {
         }
         int randomIndex = (int)(Math.random() * counter); // Random * array length to get random index
         String secretWord = wordList[randomIndex].toLowerCase(); // Select a random word from the array
+
 
         Scanner scan = new Scanner(System.in);
         System.out.println("Welcome to Hangman!");
@@ -88,6 +90,7 @@ public class HangmanGame {
             // Check if the user has guessed the full word
             if (new String(currentProgress).equals(secretWord)) {
                 System.out.println("Congratulations! You've guessed the word!");
+                score = lives * 10;
                 System.out.println(("Your score: " + score + "has been added to the leaderboard!"));
                 break;  // Exit the while loop
             }
@@ -97,8 +100,28 @@ public class HangmanGame {
         if (lives == 0) {
             System.out.println("Game Over! The secret word was: " + secretWord);
         }
+        String highScoreFile = "highscores.txt";
+
+        // Load existing scores
+        ArrayList<HighScore> highScores = loadHighScores(highScoreFile);
+        // Add this player's score, sort, keep top 5
+        addScoreAndKeepTop5(highScores, playerName, score);
+        System.out.println("Saving to: " + new File(highScoreFile).getAbsolutePath());
+
+        // Save updated top 5 back to file
+        saveHighScores(highScoreFile, highScores);
+        // Print leaderboard
+        System.out.println("\n*===== TOP 5 LEADERBOARD =====*");
+        for (int i = 0; i < highScores.size(); i++) {
+            HighScore hs = highScores.get(i);
+            System.out.println((i + 1) + ". " + hs.getName() + " - " + hs.getScore());
+        }
+        System.out.println("*=============================*");
+
         scan.close();
     }
+
+
     // Method converts Text file → Objects in memory
     private static ArrayList<HighScore> loadHighScores(String fileName) {
         ArrayList<HighScore> scores = new ArrayList<>(); // Holds all score objects loaded from file
@@ -142,7 +165,6 @@ public class HangmanGame {
     // saveHighScores() = memory → disk
     // * This is the data flow
 
-
     private static void addScoreAndKeepTop5(ArrayList<HighScore> scores,
                                             String playerName,
                                             int score) {
@@ -163,7 +185,5 @@ public class HangmanGame {
             // Removes the last element in the list (lowest score)
         }
     }
-
-
 }
 
