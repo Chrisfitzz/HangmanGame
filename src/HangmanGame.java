@@ -1,5 +1,6 @@
 import java.io.*;
 import java.util.Scanner;
+import java.util.ArrayList;
 
 public class HangmanGame {
     public static void main(String[] args) {
@@ -98,5 +99,32 @@ public class HangmanGame {
         }
         scan.close();
     }
+    // Method converts Text file → Objects in memory
+    private static ArrayList<HighScore> loadHighScores(String fileName) {
+        ArrayList<HighScore> scores = new ArrayList<>(); // Holds all score objects loaded from file
+
+        //Checks if file exists
+        File file = new File(fileName);
+        if (!file.exists()) {
+            return scores; // No file yet -> no scores
+        }
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(fileName))) { // Opens the file
+            String line;
+            while ((line = reader.readLine()) != null) { // Read line by line until end of file
+                String[] parts = line.split(","); // Splits line into 2 parts: name and score
+                if (parts.length == 2) {
+                    String name = parts[0].trim();
+                    int score = Integer.parseInt(parts[1].trim()); //Converts score from String to int
+                    scores.add(new HighScore(name, score)); // Creates new HighScore object
+                }
+            }
+        } catch (IOException | NumberFormatException e) {
+            System.out.println("Error loading highscores: " + e.getMessage());
+        }
+
+        return scores; // Returns the list of HighScore objects loaded from the file
+    }
+
 }
 
