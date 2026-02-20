@@ -1,156 +1,231 @@
 import java.io.*;
-import java.util.Scanner;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
+import java.util.HashSet;
+import java.util.Set;
 
 public class HangmanGame {
+
+    private static final String WORDS_FILE = "words.txt";
+    private static final String HIGH_SCORE_FILE = "highscores.txt";
+    private static final int MAX_LIVES = 6;
+
     public static void main(String[] args) {
 
-        int counter = 0;
-        //Would be better to use an Arraylist, but using an array to learn
-        // 1. -- First pass to count the number of lines (words) to determine array size
-        try (BufferedReader reader = new BufferedReader(new FileReader("words.txt"))) { // Opens the file
-            // New FileReader("/Users/chrisfitzgerald/IdeaProjectso/HangmanGame/words.txt");
-            // -- Absolute path, but not portable. Using relative path instead.
-
-            String line;
-            while ((line = reader.readLine()) != null) { //Read line by line until end of file
-                counter++;
-            }
-        } catch (IOException e) {
-            System.out.println("Error reading the file: " + e.getMessage());
-        }
-        String [] wordList = new String[counter]; // Array to hold filewords -- size is number of lines in file
-        // Check if list is empty before proceeding to fill the array
-        if (counter == 0) {
-            System.out.println("No words found in words.txt. Exiting game.");
+        // 1. Load words
+        List<String> words = loadWords(WORDS_FILE);
+        if (words.isEmpty()) {
+            System.out.println("No words found in " + WORDS_FILE + ". Exiting game.");
             return;
         }
 
-
-        // 2. -- Second pass to fill the array with words
-        try (BufferedReader reader = new BufferedReader(new FileReader("words.txt"))) {
-            int index = 0;
-            String line;
-            while ((line = reader.readLine()) != null) { // Read line by line until end of file
-                wordList[index] = line; // Fill the array with words from the file
-                index++;
-            }
-        } catch (IOException e) {
-            System.out.println("Error reading the file: " + e.getMessage());
-        }
-        int randomIndex = (int)(Math.random() * counter); // Random * array length to get random index
-        String secretWord = wordList[randomIndex].toLowerCase(); // Select a random word from the array
-
-
         Scanner scan = new Scanner(System.in);
+
+        // 2. Get player name
         System.out.println("Welcome to Hangman!");
         System.out.println("Enter your name:");
         String playerName = scan.nextLine();
-        int score = 0; // Initialize score variable
 
-        char[] currentProgress = new char[secretWord.length()];
-        for (int i = 0; i < currentProgress.length; i++) {
-            currentProgress[i] = '_';
+        // 3. Pick a random word
+        String secretWord = chooseRandomWord(words).toLowerCase();
+
+        // 4. Play one round and get score
+        int score = playRound(secretWord, scan);
+
+        // 5. High scores
+        handleHighScores(playerName, score);
+
+        scan.close();
+    }
+
+    // -------- WORD LOADING --------
+
+    private static List<String> loadWords(String fileName) {
+        List<String> words = new ArrayList<>();
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(fileName))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (!line.isEmpty()) {
+                    words.add(line);
+                }
+            }
+        } catch (IOException e) {
+            System.out.println("Error reading words file: " + e.getMessage());
         }
 
+        return words;
+    }
 
-        int lives = 6;//Track lives
+    private static String chooseRandomWord(List<String> words) {
+        int randomIndex = (int) (Math.random() * words.size());
+        return words.get(randomIndex);
+    }
+
+    // -------- GAMEPLAY --------
+
+    private static int playRound(String secretWord, Scanner scan) {
+        int lives = MAX_LIVES;
+        int score = 0;
+
+        char[] currentProgress = initProgress(secretWord);
+        Set<Character> guessedLetters = new HashSet<>();
+
         while (lives > 0) {
-            // Print the progress
-            for (char c : currentProgress) { // Print each character in current progress
-                System.out.print(c + " ");
+
+            // Show current state (gallows + word + lives)
+            displayGameState(lives, currentProgress, guessedLetters);
+
+            // Get a valid guess
+            char guessedLetter = readGuess(scan);
+
+            // Already guessed → no life lost
+            if (guessedLetters.contains(guessedLetter)) {
+                System.out.println("You've already guessed '" + guessedLetter + "'. Try a different letter.");
+                continue;
             }
-            System.out.println();
-            System.out.println("Lives remaining: " + lives);
 
-            // Ask for a guess
-            System.out.println("\nEnter your guess:");
-            String guess = scan.nextLine();
-            if (guess.isEmpty()) {
-                System.out.println("Please enter at least one character.");
-                continue; // skip to next loop iteration
-            }
-            char guessedLetter = guess.toLowerCase().charAt(0);
-            // not case sensitive, take first character
+            // Record this new guess
+            guessedLetters.add(guessedLetter);
 
+            // Show guessed letters (now including this one)
+            printGuessedLetters(guessedLetters);
 
-            // Check if the letter is in the secret word
-            if (secretWord.indexOf(guessedLetter) >= 0) { // Letter is in the word
+            // Apply the guess
+            boolean correct = applyGuess(secretWord, guessedLetter, currentProgress);
+            if (correct) {
                 System.out.println("Correct guess!");
-                for (int i = 0; i < secretWord.length(); i++) {
-                    if (secretWord.charAt(i) == guessedLetter) {
-                        currentProgress[i] = guessedLetter; // Update current progress
-                    }
-                }
             } else {
                 System.out.println("Wrong guess!");
                 lives--;
             }
 
-            // Check if the user has guessed the full word
-            if (new String(currentProgress).equals(secretWord)) {
+            // Check for win
+            if (isWordGuessed(currentProgress, secretWord)) {
                 System.out.println("Congratulations! You've guessed the word!");
                 score = lives * 10;
-                System.out.println(("Your score: " + score + "has been added to the leaderboard!"));
-                break;  // Exit the while loop
+                System.out.println("Your score: " + score + " has been added to the leaderboard!");
+                break;
             }
         }
 
-        // After loop finishes
         if (lives == 0) {
+            Gallows.printGallows(lives);
             System.out.println("Game Over! The secret word was: " + secretWord);
         }
-        String highScoreFile = "highscores.txt";
 
-        // Load existing scores
-        ArrayList<HighScore> highScores = loadHighScores(highScoreFile);
-        // Add this player's score, sort, keep top 5
+        return score;
+    }
+
+    private static char[] initProgress(String secretWord) {
+        char[] progress = new char[secretWord.length()];
+        for (int i = 0; i < progress.length; i++) {
+            progress[i] = '_';
+        }
+        return progress;
+    }
+
+    private static void displayGameState(int lives,
+                                         char[] currentProgress,
+                                         Set<Character> guessedLetters) {
+
+        Gallows.printGallows(lives);
+
+        // Show current word progress
+        for (char c : currentProgress) {
+            System.out.print(c + " ");
+        }
+        System.out.println();
+
+        // Show remaining lives
+        System.out.println("Lives remaining: " + lives);
+    }
+
+    private static char readGuess(Scanner scan) {
+        while (true) {
+            System.out.println("\nEnter your guess:");
+            String guess = scan.nextLine();
+            if (guess.isEmpty()) {
+                System.out.println("Please enter at least one character.");
+                continue;
+            }
+            return Character.toLowerCase(guess.charAt(0));
+        }
+    }
+
+    private static void printGuessedLetters(Set<Character> guessedLetters) {
+        System.out.print("Guessed letters: ");
+        if (guessedLetters.isEmpty()) {
+            System.out.println("none yet");
+        } else {
+            for (char c : guessedLetters) {
+                System.out.print(c + " ");
+            }
+            System.out.println();
+        }
+    }
+
+    private static boolean applyGuess(String secretWord,
+                                      char guessedLetter,
+                                      char[] currentProgress) {
+        boolean found = false;
+        for (int i = 0; i < secretWord.length(); i++) {
+            if (secretWord.charAt(i) == guessedLetter) {
+                currentProgress[i] = guessedLetter;
+                found = true;
+            }
+        }
+        return found;
+    }
+
+    private static boolean isWordGuessed(char[] currentProgress, String secretWord) {
+        return new String(currentProgress).equals(secretWord);
+    }
+
+    // -------- HIGH SCORE HANDLING --------
+
+    private static void handleHighScores(String playerName, int score) {
+        ArrayList<HighScore> highScores = loadHighScores(HIGH_SCORE_FILE);
         addScoreAndKeepTop5(highScores, playerName, score);
-        System.out.println("Saving to: " + new File(highScoreFile).getAbsolutePath());
+        System.out.println("Saving to: " + new File(HIGH_SCORE_FILE).getAbsolutePath());
+        saveHighScores(HIGH_SCORE_FILE, highScores);
 
-        // Save updated top 5 back to file
-        saveHighScores(highScoreFile, highScores);
         // Print leaderboard
-        System.out.println("\n*===== TOP 5 LEADERBOARD =====*");
+        System.out.println("\n* - - - - TOP 5 LEADERBOARD - - - - *");
         for (int i = 0; i < highScores.size(); i++) {
             HighScore hs = highScores.get(i);
             System.out.println((i + 1) + ". " + hs.getName() + " - " + hs.getScore());
         }
-        System.out.println("*=============================*");
-
-        scan.close();
+        System.out.println("* - - - - - - - - - *");
     }
 
-
-    // Method converts Text file → Objects in memory
     private static ArrayList<HighScore> loadHighScores(String fileName) {
-        ArrayList<HighScore> scores = new ArrayList<>(); // Holds all score objects loaded from file
+        ArrayList<HighScore> scores = new ArrayList<>();
 
-        //Checks if file exists
         File file = new File(fileName);
         if (!file.exists()) {
-            return scores; // No file yet -> no scores
+            return scores;
         }
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(fileName))) { // Opens the file
+        try (BufferedReader reader = new BufferedReader(new FileReader(fileName))) {
             String line;
-            while ((line = reader.readLine()) != null) { // Read line by line until end of file
-                String[] parts = line.split(","); // Splits line into 2 parts: name and score
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",");
                 if (parts.length == 2) {
                     String name = parts[0].trim();
-                    int score = Integer.parseInt(parts[1].trim()); //Converts score from String to int
-                    scores.add(new HighScore(name, score)); // Creates new HighScore object
+                    int score = Integer.parseInt(parts[1].trim());
+                    scores.add(new HighScore(name, score));
                 }
             }
         } catch (IOException | NumberFormatException e) {
             System.out.println("Error loading highscores: " + e.getMessage());
         }
 
-        return scores; // Returns the list of HighScore objects loaded from the file
+        return scores;
     }
 
-
-    // Saves the current list of HighScore objects to highscores.txt (overwrites file)
     private static void saveHighScores(String fileName, ArrayList<HighScore> scores) {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(fileName))) {
             for (HighScore hs : scores) {
@@ -161,29 +236,19 @@ public class HangmanGame {
             System.out.println("Error saving highscores: " + e.getMessage());
         }
     }
-    // loadHighScores() = disk → memory
-    // saveHighScores() = memory → disk
-    // * This is the data flow
 
     private static void addScoreAndKeepTop5(ArrayList<HighScore> scores,
                                             String playerName,
                                             int score) {
 
-        // Add the new score
         scores.add(new HighScore(playerName, score));
 
         // Sort descending (highest score first)
         scores.sort((a, b) -> Integer.compare(b.getScore(), a.getScore()));
-        // (a, b) -> Integer - lambda expression (setting up comparison)
-        // Integer.compare.. - compares two integers and returns a value indicating their order
-        // b then a = descending | a then b = ascending
 
+        // Keep only top 5
         while (scores.size() > 5) {
-        // while loop because sometimes 6 entries → remove 1 | 7 entries → remove 2
-
             scores.remove(scores.size() - 1);
-            // Removes the last element in the list (lowest score)
         }
     }
 }
-
