@@ -1,9 +1,9 @@
-#Hangman Game (Java)
+# Hangman Game (Java)
 
 A simple console-based Hangman game written in Java.
 This project started as a practice exercise and grew into a more structured game with cleaner code, separate classes, and a small leaderboard system.
 
-##Features
+## Features
 
 Random word selection from a words.txt file
 
@@ -19,7 +19,7 @@ Stores top 5 high scores in highscores.txt
 
 Refactored code with helper methods and separate classes (e.g., Gallows, HighScore)
 
-##How to Run
+## How to Run
 
 Compile the files:
 
@@ -44,7 +44,7 @@ words.txt in the project folder
 
 write permission for highscores.txt (it will be created automatically)
 
-Project Structure
+## Project Structure
 
 ```
 
@@ -62,7 +62,7 @@ highscores.txt is ignored by Git since it’s player-specific and changes every 
 
 This project is mainly for learning Java fundamentals, file I/O, collections, and cleaner program structure.
 
-Future Ideas
+## Future Ideas
 
 Add a streak setting to create more variations in scores
 
